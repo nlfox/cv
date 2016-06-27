@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    <script src="//cdn.bootcss.com/jquery/2.2.4/jquery.js"></script>
+    <script src="https://webrtc.github.io/samples/src/js/adapter.js"></script>
+    <link href="//cdn.bootcss.com/bootstrap/3.3.6/css/bootstrap.css" rel="stylesheet">
+
+
+    <title>cv</title>
+
+</head>
+
+<body>
+
+<div class="container">
+    <div class="row">
+        <div class="col-md-6">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <h3 class="panel-title">Camera</h3>
+                </div>
+                <div class="panel-body">
+                    <video id="live" width="400" height="400" autoplay style="display: inline;"></video>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <h3 class="panel-title">画布</h3>
+                </div>
+                <div class="panel-body">
+                    <canvas width="400" id="canvas" height="400"></canvas>
+                </div>
+            </div>
+
+        </div>
+        <div class="col-md-6">
+            <div class="panel panel-default">
+                <div class="panel-body">
+                    <button onclick="shot()">截图</button>
+                    <label>
+                        <input id="in" type="text" placeholder="http://example.com/1.jpg">
+                    </label>
+
+                    <button onclick="loadImg()">读取图像</button>
+                    <button onclick="check()">分析</button>
+                    <button onclick="clr()">清空</button>
+                </div>
+            </div>
+
+        </div>
+        <div class="col-md-6">
+            <div class="panel panel-default">
+                <div id="res" class="panel-body">
+                    Nothing
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+
+</div><!-- /.container -->
+
+
+<!-- Bootstrap core JavaScript
+================================================== -->
+<!-- Placed at the end of the document so the pages load faster -->
+<script type="text/javascript">
+    var ws = new WebSocket("ws://127.0.0.1:5000/echo");
+    var video = document.querySelector('video');
+    var canvas = $("#canvas");
+    var ctx = canvas.get()[0].getContext('2d');
+    var constraints = window.constraints = {
+        audio: false,
+        video: true
+    };
+    var errorElement = document.querySelector('#errorMsg');
+
+    navigator.mediaDevices.getUserMedia(constraints)
+            .then(function (stream) {
+                var videoTracks = stream.getVideoTracks();
+                console.log('Got stream with constraints:', constraints);
+                console.log('Using video device: ' + videoTracks[0].label);
+                stream.onended = function () {
+                    console.log('Stream ended');
+                };
+                window.stream = stream; // make variable available to browser console
+                video.srcObject = stream;
+            })
+            .catch(function (error) {
+                if (error.name === 'ConstraintNotSatisfiedError') {
+                    errorMsg('The resolution ' + constraints.video.width.exact + 'x' +
+                            constraints.video.width.exact + ' px is not supported by your device.');
+                } else if (error.name === 'PermissionDeniedError') {
+                    errorMsg('Permissions have not been granted to use your camera and ' +
+                            'microphone, you need to allow the page access to your devices in ' +
+                            'order for the demo to work.');
+                }
+                errorMsg('getUserMedia error: ' + error.name, error);
+            });
+
+    function errorMsg(msg, error) {
+        errorElement.innerHTML += '<p>' + msg + '</p>';
+        if (typeof error !== 'undefined') {
+            console.error(error);
+        }
+    }
+    ws.onmessage = function (msg) {
+        console.log(msg.data);
+        $("#res").text(msg.data);
+    };
+
+    function shot() {
+        ctx.drawImage(video, 0, 0,320,240);
+    }
+    function check() {
+        var data = canvas.get()[0].toDataURL('image/jpeg', 1.0);
+        $("#res").text("pending");
+        ws.send(data);
+    }
+    function loadImg(u) {
+        var img = new Image();
+        img.onload = function () {
+            ctx.drawImage(img, 0, 0);
+
+        };
+        img.src = $("#in").val();
+    }
+    function clr() {
+        var ctx = canvas.get()[0].getContext("2d");
+        ctx.clearRect(0, 0, 400, 400);
+    }
+    //    timer = setInterval(
+    //            function () {
+    //                ctx.drawImage(video, 0, 0, 320, 240);
+    //                var data = canvas.get()[0].toDataURL('image/jpeg', 1.0);
+    //                ws.send(data);
+    //
+    //            }, 1000);
+</script>
+
+</body>
+</html>
+
+
